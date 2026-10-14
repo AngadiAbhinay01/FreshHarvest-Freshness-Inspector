@@ -46,47 +46,22 @@ def load_model(model_path):
 # --------------------------------------------------
 # 3. Image prediction
 # --------------------------------------------------
-def predict(image, model):
+def predict(image):
     image = image.convert("RGB")
-    image = image.resize((IMG_SIZE, IMG_SIZE))
+    image = image.resize((128, 128))
 
-    # Convert image to NumPy array
-    image_array = np.asarray(image, dtype=np.float32)
+    # Pass raw pixel values to the model.
+    # The model's Rescaling layer handles scaling.
+    arr = np.array(image, dtype="float32")
+    arr = np.expand_dims(arr, axis=0)
 
-    # Apply the same preprocessing used during training
-    image_array = preprocess_input(image_array)
+    prediction = model.predict(arr, verbose=0)
+    p_spoiled = float(prediction[0][0])
 
-    # Add batch dimension
-    image_array = np.expand_dims(image_array, axis=0)
+    if p_spoiled > 0.5:
+        return "SPOILED", p_spoiled
 
-    # Get model prediction
-    prediction = model.predict(image_array, verbose=0)
-
-    # This assumes a single sigmoid output:
-    # 0 = fresh and 1 = spoiled
-    if prediction.size != 1:
-        raise ValueError(
-            "Expected one sigmoid output per image. "
-            f"Received output shape: {prediction.shape}"
-        )
-
-    spoiled_probability = float(prediction.reshape(-1)[0])
-
-    if not 0.0 <= spoiled_probability <= 1.0:
-        raise ValueError(
-            "The model output is outside [0, 1]. "
-            "Check whether the model uses a sigmoid output."
-        )
-
-    if spoiled_probability >= 0.5:
-        label = "SPOILED"
-        confidence = spoiled_probability
-    else:
-        label = "FRESH"
-        confidence = 1.0 - spoiled_probability
-
-    return label, confidence
-
+    return "FRESH", 1 - p_spoiled
 
 # --------------------------------------------------
 # 4. App interface
