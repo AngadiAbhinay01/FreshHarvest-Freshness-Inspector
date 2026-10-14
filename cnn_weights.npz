@@ -1,0 +1,13 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import layers
+
+model = tf.keras.models.load_model("best_freshness_model.keras")
+
+weights = []
+for layer in model.layers:
+    if isinstance(layer, (layers.Conv2D, layers.Dense)):
+        weights.extend(layer.get_weights())
+
+np.savez("cnn_weights.npz", *weights)
+print("Saved", len(weights), "arrays")   # must print 8
